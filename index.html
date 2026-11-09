@@ -522,6 +522,11 @@ h3{font-size:16px}
 .sperrbanner{border:2px solid var(--ok);background:var(--ok-soft);color:var(--ok);border-radius:var(--r);padding:12px 14px;font-weight:600}
 fieldset.lockfs{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:inherit}
 fieldset.lockfs[disabled] .inp,fieldset.lockfs[disabled] .seg button,fieldset.lockfs[disabled] .btn{opacity:.75;cursor:default}
+.bar-r{display:flex;align-items:center;gap:12px}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.lang button{border:0;background:var(--surface);color:var(--muted);font:600 13px/1 inherit;padding:7px 10px;min-height:32px;cursor:pointer;font-family:inherit}
+.lang button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+@media (pointer:coarse){.lang button{min-height:38px;padding:8px 12px}}
 .planwahl{border:2px solid var(--accent);background:var(--accent-soft);border-radius:var(--r);padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;color:var(--accent);font-weight:600}
 .newrow .newbtn{white-space:nowrap}
 @media (max-width:1000px){.newrow{grid-template-columns:1fr 1fr}}
@@ -702,7 +707,8 @@ button,select,input,textarea{touch-action:manipulation}
 <header class="bar">
   <div class="bar-in">
     <div class="brand">VDE Prüfprotokoll<small>0100-600 · 0105-100 · 0701-0702 · 14676-1</small></div>
-    <span class="sync" id="sync">Lokal</span>
+    <div class="bar-r"><span class="sync" id="sync">Lokal</span>
+      <div class="lang" role="group" aria-label="Sprache / Jezik"><button type="button" data-lang="de" aria-pressed="true">DE</button><button type="button" data-lang="bs" aria-pressed="false">BS</button></div></div>
   </div>
   <div class="pe" aria-hidden="true"></div>
 </header>
@@ -1122,7 +1128,7 @@ function scheduleSave(){ if(!cur) return; if(view==="plan") requestAnimationFram
 function flushSave(){ if(saveTimer&&cur){ clearTimeout(saveTimer); saveTimer=null; persist(cur.id,clone(cur)); } }
 let setTimer=null;
 function saveSettings(){ fixFirma(); clearTimeout(setTimer); setTimer=setTimeout(()=>persist("settings",Object.assign({kind:"settings"},settings)),700); lsWrite(); }
-function setSync(t){ $("#sync").textContent = (mode==="db"?"":"Nur dieses Gerät · ") + t; }
+function setSync(t){ $("#sync").dataset.st=t; $("#sync").textContent = (mode==="db"?"":"Nur dieses Gerät · ") + t; }
 
 async function initDb(){
   if(!window.claude||!window.claude.use) return;
@@ -1308,7 +1314,7 @@ function listSel(list,i,field,label,options){
 function rwaTeilHtml(l,o,i){
   const d=RWA_DEF[l], n=cur[l].length, y0=new Date().getFullYear();
   const id=f=>`${l}_${i}_${f}`;
-  const ac=(f,ph)=>`<div class="ac"><input class="inp" id="${id(f)}" data-list="${l}" data-idx="${i}" data-field="${f}" data-gac="${l}|${i}|${f}" value="${esc(o[f]||"")}" placeholder="${esc(ph||"")}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_${l}_${i}_${f}"><div class="ac-list" id="gac_${l}_${i}_${f}" role="listbox" hidden></div></div>`;
+  const ac=(f,ph)=>`<div class="ac"><input class="inp" id="${id(f)}" data-list="${l}" data-idx="${i}" data-field="${f}" data-gac="${l}|${i}|${f}" value="${esc(o[f]||"")}" placeholder="${esc(ph||"")}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_${l}_${i}_${f}"><div class="ac-list" data-notr id="gac_${l}_${i}_${f}" role="listbox" hidden></div></div>`;
   const feld=([f,lab,art,opt])=>{
     if(art==="sel") return `<label class="f"><span>${lab}</span><select class="inp" id="${id(f)}" data-list="${l}" data-idx="${i}" data-field="${f}">${opt.map(v=>`<option ${o[f]===v?"selected":""}>${esc(v)}</option>`).join("")}</select></label>`;
     if(art==="jahr"){ const j=[""]; for(let y=y0;y>=y0-12;y--) j.push(String(y)); return `<label class="f"><span>${lab}</span><select class="inp" id="${id(f)}" data-list="${l}" data-idx="${i}" data-field="${f}" data-rr="1">${j.map(v=>`<option value="${v}" ${String(o[f]||"")===v?"selected":""}>${v||"unbekannt"}</option>`).join("")}</select></label>`; }
@@ -1335,12 +1341,12 @@ function melderHtml(m,i){
   const pkt=RWM_PUNKTE.map(([k,l])=>`<div class="check"><span>${esc(l)}</span>${seg(`data-mseg="${i}-${k}" data-v`,m[k],[["ok","✓","ok"],["nok","✗","nok"]])}</div>`).join("");
   return `<div class="item" data-item="melder-${i}">
     <div class="item-h"><span class="zmove kmove"><button class="btn small ghost" data-kmove="${i}" data-klist="melder" data-dir="-1" aria-label="Melder nach oben" ${i===0?"disabled":""}>▲</button><button class="btn small ghost" data-kmove="${i}" data-klist="melder" data-dir="1" aria-label="Melder nach unten" ${i===cur.melder.length-1?"disabled":""}>▼</button></span><span class="nr">Nr.</span><input class="inp num" style="width:72px" id="melder_${i}_nr" data-list="melder" data-idx="${i}" data-field="nr" value="${esc(m.nr)}" aria-label="Melder-Nr.">
-      <div class="ac grow"><input class="inp" id="melder_${i}_raum" data-list="melder" data-idx="${i}" data-field="raum" data-gac="melder|${i}|raum" value="${esc(m.raum)}" placeholder="Raum, z. B. Schlafzimmer" aria-label="Raum" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_melder_${i}_raum"><div class="ac-list" id="gac_melder_${i}_raum" role="listbox" hidden></div></div>
+      <div class="ac grow"><input class="inp" id="melder_${i}_raum" data-list="melder" data-idx="${i}" data-field="raum" data-gac="melder|${i}|raum" value="${esc(m.raum)}" placeholder="Raum, z. B. Schlafzimmer" aria-label="Raum" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_melder_${i}_raum"><div class="ac-list" data-notr id="gac_melder_${i}_raum" role="listbox" hidden></div></div>
       <span data-status="melder-${i}"></span>
       <button class="btn small ghost" data-mdup="${i}" aria-label="Melder kopieren">Kopieren</button>
       <button class="btn small ghost" data-del-item="melder-${i}" aria-label="Melder entfernen">Entfernen</button></div>
     <div class="grid tight">
-      <label class="f"><span>Hersteller / Typ</span><div class="ac"><input class="inp" id="melder_${i}_typ" data-list="melder" data-idx="${i}" data-field="typ" data-gac="melder|${i}|typ" value="${esc(m.typ)}" placeholder="z. B. Ei Electronics Ei650" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_melder_${i}_typ"><div class="ac-list" id="gac_melder_${i}_typ" role="listbox" hidden></div></div></label>
+      <label class="f"><span>Hersteller / Typ</span><div class="ac"><input class="inp" id="melder_${i}_typ" data-list="melder" data-idx="${i}" data-field="typ" data-gac="melder|${i}|typ" value="${esc(m.typ)}" placeholder="z. B. Ei Electronics Ei650" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_melder_${i}_typ"><div class="ac-list" data-notr id="gac_melder_${i}_typ" role="listbox" hidden></div></div></label>
       <label class="f"><span>Herstelljahr</span><select class="inp" id="melder_${i}_baujahr" data-list="melder" data-idx="${i}" data-field="baujahr" data-rr="1">${jahre.map(j=>`<option value="${j}" ${String(m.baujahr)===j?"selected":""}>${j||"unbekannt"}</option>`).join("")}</select></label>
       <label class="f"><span>Maßnahme</span><select class="inp" id="melder_${i}_massnahme" data-list="melder" data-idx="${i}" data-field="massnahme">${RWM_MASSNAHME.map(v=>`<option value="${esc(v)}" ${m.massnahme===v?"selected":""}>${v==="keine"?"keine Maßnahme":esc(v)}</option>`).join("")}</select></label>
     </div>
@@ -1352,7 +1358,7 @@ function melderHtml(m,i){
 function kreisHtml(k,i){
   return `<div class="item" data-item="kreise-${i}">
     <div class="item-h"><span class="zmove kmove"><button class="btn small ghost" data-kmove="${i}" data-dir="-1" aria-label="Stromkreis nach oben" ${i===0?"disabled":""}>▲</button><button class="btn small ghost" data-kmove="${i}" data-dir="1" aria-label="Stromkreis nach unten" ${i===cur.kreise.length-1?"disabled":""}>▼</button></span><span class="nr">SK</span><input class="inp num" style="width:96px" id="kreise_${i}_nr" data-list="kreise" data-idx="${i}" data-field="nr" value="${esc(k.nr)}" aria-label="Stromkreis-Nr.">
-      <div class="ac grow"><input class="inp" id="kreise_${i}_bez" data-list="kreise" data-idx="${i}" data-field="bez" data-kac="${i}" value="${esc(k.bez)}" placeholder="Bezeichnung, z. B. Steckdosen Küche" aria-label="Bezeichnung" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="kac_${i}"><div class="ac-list" id="kac_${i}" role="listbox" hidden></div></div>
+      <div class="ac grow"><input class="inp" id="kreise_${i}_bez" data-list="kreise" data-idx="${i}" data-field="bez" data-kac="${i}" value="${esc(k.bez)}" placeholder="Bezeichnung, z. B. Steckdosen Küche" aria-label="Bezeichnung" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="kac_${i}"><div class="ac-list" data-notr id="kac_${i}" role="listbox" hidden></div></div>
       <span data-status="kreise-${i}"></span>
       <button class="btn small ghost" data-del-item="kreise-${i}" aria-label="Stromkreis entfernen">Entfernen</button></div>
     <div class="sub">Leitung / Kabel</div>
@@ -1402,14 +1408,14 @@ function geraetHtml(g,i){
   const verlauf=(g.verlauf||[]).length?`<div class="verlauf"><div class="sub">Frühere Prüfungen</div>${g.verlauf.map(v=>`<div class="vzeile"><b>${esc(kurzDatum(v.datum))}</b> ${esc(v.bem||"")} · R PE ${esc(v.rpe||"-")} · R ISO ${esc(v.riso||"-")} · I PE ${esc(v.ipe||"-")}${v.ib?" · I B "+esc(v.ib):""} · bestanden ${esc(v.bestanden||"-")}${v.pruefer?" · "+esc(v.pruefer):""}</div>`).join("")}</div>`:"";
   return `<div class="item" data-item="geraete-${i}">
     <div class="item-h"><span class="nr">${i+1}</span>
-      <div class="ac grow"><input class="inp" id="geraete_${i}_bez" data-list="geraete" data-idx="${i}" data-field="bez" data-gac="${i}|bez" value="${esc(g.bez)}" placeholder="Prüfobjekt, z. B. Kaffeemaschine" aria-label="Prüfobjekt" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_${i}_bez"><div class="ac-list" id="gac_${i}_bez" role="listbox" hidden></div></div>
+      <div class="ac grow"><input class="inp" id="geraete_${i}_bez" data-list="geraete" data-idx="${i}" data-field="bez" data-gac="${i}|bez" value="${esc(g.bez)}" placeholder="Prüfobjekt, z. B. Kaffeemaschine" aria-label="Prüfobjekt" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_${i}_bez"><div class="ac-list" data-notr id="gac_${i}_bez" role="listbox" hidden></div></div>
       <button class="btn small ghost" data-dup-item="${i}" aria-label="Gerät kopieren">Kopieren</button>
       <button class="btn small ghost" data-del-item="geraete-${i}" aria-label="Gerät entfernen">Entfernen</button></div>
     <div class="grid tight">
       ${listInp("geraete",i,"hersteller","Hersteller")}
       ${listInp("geraete",i,"sn","Fabrik-/Serien-Nr.")}
       ${listInp("geraete",i,"inv","Inventar-Nr.")}
-      <label class="f"><span>Standort</span><div class="ac"><input class="inp" id="geraete_${i}_standort" data-list="geraete" data-idx="${i}" data-field="standort" data-gac="${i}|standort" value="${esc(g.standort)}" placeholder="z. B. Büro 1" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_${i}_standort"><div class="ac-list" id="gac_${i}_standort" role="listbox" hidden></div></div></label>
+      <label class="f"><span>Standort</span><div class="ac"><input class="inp" id="geraete_${i}_standort" data-list="geraete" data-idx="${i}" data-field="standort" data-gac="${i}|standort" value="${esc(g.standort)}" placeholder="z. B. Büro 1" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gac_${i}_standort"><div class="ac-list" data-notr id="gac_${i}_standort" role="listbox" hidden></div></div></label>
       ${listInp("geraete",i,"besonderheit","Besonderheit")}
     </div>
     <div class="rcdrow"><span class="sub" style="margin:0">Schutzklasse</span>${seg(`data-gsk="${i}" data-v`,g.sk,[["I","SK I mit Schutzleiter","any"],["II","SK II","any"],["III","SK III","any"]])}</div>
@@ -1438,7 +1444,7 @@ function renderEditor(){
     ${p.gesperrt?`<div class="sperrbanner">Protokoll abgeschlossen und gesperrt am ${esc(new Date(p.gesperrt).toLocaleDateString("de-DE"))}. Änderungen sind nicht mehr möglich, nur noch der Ausdruck als PDF.</div>`:""}
     <fieldset class="lockfs" ${p.gesperrt?"disabled":""}>
     <div class="sec"><h2>Objekt</h2>
-      <div class="grid addr">${inp("kunde.name","Auftraggeber / Kunde",{ph:"Firma oder Name"})}<div class="f ac"><label class="f sr" for="e_kunde_strasse"><span>Straße und Hausnummer</span></label><input class="inp" id="e_kunde_strasse" data-bind="kunde.strasse" data-ac="kunde" value="${esc(p.kunde.strasse)}" placeholder="Straße und Hausnummer" autocomplete="off" autocapitalize="words" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ac_kunde"><div class="ac-list" id="ac_kunde" role="listbox" hidden></div></div>${inp("kunde.ort","PLZ Ort",{ph:"PLZ Ort"}).replace('<label class="f">','<label class="f nolbl">')}</div>
+      <div class="grid addr">${inp("kunde.name","Auftraggeber / Kunde",{ph:"Firma oder Name"})}<div class="f ac"><label class="f sr" for="e_kunde_strasse"><span>Straße und Hausnummer</span></label><input class="inp" id="e_kunde_strasse" data-bind="kunde.strasse" data-ac="kunde" value="${esc(p.kunde.strasse)}" placeholder="Straße und Hausnummer" autocomplete="off" autocapitalize="words" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ac_kunde"><div class="ac-list" data-notr id="ac_kunde" role="listbox" hidden></div></div>${inp("kunde.ort","PLZ Ort",{ph:"PLZ Ort"}).replace('<label class="f">','<label class="f nolbl">')}</div>
       <div class="grid">${inp("objekt.bezeichnung","Objekt",{ph:isA?"z. B. Wohnhaus, Erdgeschoss":isR?"z. B. Wohnung 2. OG links":isW?"z. B. Mehrfamilienhaus, Treppenhaus Haus 2":"z. B. Büro 2. OG"})}${isA?inp("verteiler","Verteiler",{ph:"z. B. UV-1, HV"}):""}${isR?inp("nutzer","Nutzer / Mieter",{ph:"Name des Nutzers"}):inp("objekt.ort","Ort der Anlage")}</div>
       <div class="grid">${sel("pruefart","Grund der Prüfung",isA?["Erstprüfung","Wiederholungsprüfung","Änderung / Erweiterung","Instandsetzung"]:isR?RWM_ANLASS:isW?RWA_ANLASS:ANLASS_G)}${inp("pruefer","Prüfer",{ph:"Vorname und Name"})}</div>
       ${datumHtml(p)}
@@ -1446,7 +1452,7 @@ function renderEditor(){
     </div>
 
     ${isR||isW?"":`<div class="sec"><h2>Verwendetes Messgerät</h2>
-      <div class="grid tight"><div class="f ac"><label class="f" for="e_messgeraete_0_fabrikat"><span>Fabrikat</span></label><input class="inp" id="e_messgeraete_0_fabrikat" data-bind="messgeraete.0.fabrikat" data-mac="1" value="${esc(p.messgeraete[0].fabrikat)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="mac_list"><div class="ac-list" id="mac_list" role="listbox" hidden></div></div>${inp("messgeraete.0.typ","Typ")}</div>
+      <div class="grid tight"><div class="f ac"><label class="f" for="e_messgeraete_0_fabrikat"><span>Fabrikat</span></label><input class="inp" id="e_messgeraete_0_fabrikat" data-bind="messgeraete.0.fabrikat" data-mac="1" value="${esc(p.messgeraete[0].fabrikat)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="mac_list"><div class="ac-list" data-notr id="mac_list" role="listbox" hidden></div></div>${inp("messgeraete.0.typ","Typ")}</div>
       <p class="note" style="margin:0">Fabrikat antippen, um aus gängigen Prüfgeräten zu wählen.</p>
     </div>`}
 
@@ -2771,8 +2777,179 @@ async function savePlanPdf(p){
   catch(e){ const c=e&&e.code; if(c==="declined") return; toast(c==="rate_limited"?"Bitte kurz warten und erneut tippen.":"PDF konnte nicht gespeichert werden."); }
 }
 
+/* ---------- Sprache der App-Oberfläche (Deutsch / Bosanski). PDFs bleiben immer deutsch. ----------
+   Übersetzt wird nur die Anzeige im Browser (Texte, Platzhalter, Beschriftungen). Gespeicherte Werte bleiben deutsch. */
+const BS={
+"VDE Prüfprotokoll":"VDE zapisnik o ispitivanju",
+"Lokal":"Lokalno","bereit":"spremno","Gespeichert":"Sačuvano","Speichert …":"Čuva se …","Ungespeichert":"Nije sačuvano","Cloud nicht erreichbar":"Oblak nije dostupan",
+"Elektro Wüller GmbH · Protokolle":"Elektro Wüller GmbH · Zapisnici",
+"E-Installation Protokoll":"Elektroinstalacija","Geräte Protokoll":"Uređaji","Rauchmelder Protokoll":"Javljači dima","RWA Protokoll":"RWA (odvod dima)",
+"E-Installation":"Elektroinstalacija","Geräte":"Uređaji","Rauchmelder":"Javljači dima","RWA":"RWA",
+"Kunde, Adresse oder Verteiler suchen":"Traži klijenta, adresu ili razvodnu tablu",
+"Noch keine Protokolle":"Još nema zapisnika",
+"E-Installation anlegen":"Nova elektroinstalacija","Geräteprotokoll anlegen":"Novi zapisnik za uređaje","Rauchmelder-Protokoll anlegen":"Novi zapisnik za javljače dima","RWA-Protokoll anlegen":"Novi RWA zapisnik",
+"Beispiel ansehen":"Pogledaj primjer",
+"UV Legende":"Legenda razvodne table","Prüfprotokoll":"Zapisnik","Löschen":"Obriši","Löschen?":"Obrisati?","Ja":"Da","Nein":"Ne",
+"Datensicherung":"Sigurnosna kopija","Daten sichern":"Sačuvaj podatke","Daten wiederherstellen":"Vrati podatke","Daten automatisch sichern":"Automatski čuvaj podatke",
+"Automatische Datensicherung beenden":"Zaustavi automatsku kopiju","Automatische Datensicherung fortsetzen":"Nastavi automatsku kopiju",
+"Noch keine Datensicherung auf dem Gerät gespeichert.":"Na uređaju još nema sigurnosne kopije.",
+"Noch keine Datensicherung auf dem Gerät gespeichert. · Bitte jetzt Daten sichern, damit keine Protokolle verloren gehen.":"Na uređaju još nema sigurnosne kopije. · Molimo sada sačuvajte podatke da se zapisnici ne bi izgubili.",
+"Letzte Datensicherung: heute":"Zadnja sigurnosna kopija: danas",
+"Auf iPad oder iPhone: Seite in Safari öffnen, Teilen-Symbol, „Zum Home-Bildschirm“. Dann startet das Prüfprotokoll wie eine App.":"Na iPadu ili iPhoneu: otvorite stranicu u Safariju, simbol za dijeljenje, „Dodaj na početni ekran“. Tada se zapisnik pokreće kao aplikacija.",
+"Das E-Installationsprotokoll folgt eurem bisherigen Master-Protokoll: Besichtigung, Erprobung, Messung und die Stromkreistabelle mit Zs oder Ik, R iso und RCD-Werten. Grenzwerte werden beim Eintippen bewertet.":"Zapisnik za elektroinstalaciju prati vaš dosadašnji glavni zapisnik: vizuelni pregled, funkcionalna provjera, mjerenje i tabela strujnih krugova sa Zs ili Ik, R iso i RCD vrijednostima.",
+"Zurück zu Protokolle":"Nazad na zapisnike","Zurück zum Protokoll":"Nazad na zapisnik",
+"Prüfprotokoll elektrische Anlage":"Zapisnik o ispitivanju električne instalacije","Prüfprotokoll elektrische Geräte":"Zapisnik o ispitivanju električnih uređaja","Wartungsprotokoll Rauchwarnmelder":"Zapisnik o održavanju javljača dima","Prüfprotokoll RWA-Anlage":"Zapisnik o ispitivanju RWA sistema",
+"Neues Protokoll":"Novi zapisnik",
+"Objekt":"Objekat","Auftraggeber / Kunde":"Naručilac / klijent","Firma oder Name":"Firma ili ime","Straße und Hausnummer":"Ulica i kućni broj","PLZ Ort":"Poštanski broj i mjesto",
+"Verteiler":"Razvodna tabla","Ort der Anlage":"Lokacija instalacije","Nutzer / Mieter":"Korisnik / stanar","Name des Nutzers":"Ime korisnika",
+"Grund der Prüfung":"Razlog ispitivanja","Prüfer":"Ispitivač","Vorname und Name":"Ime i prezime","Prüfdatum":"Datum ispitivanja","Heute":"Danas","Tag":"Dan","Monat":"Mjesec","Jahr":"Godina",
+"Januar":"Januar","Februar":"Februar","März":"Mart","April":"April","Mai":"Maj","Juni":"Juni","Juli":"Juli","August":"August","September":"Septembar","Oktober":"Oktobar","November":"Novembar","Dezember":"Decembar",
+"Erstprüfung":"Prvo ispitivanje","Wiederholungsprüfung":"Ponovno ispitivanje","Änderung / Erweiterung":"Izmjena / proširenje","Instandsetzung":"Popravka","Eingangsprüfung":"Ulazno ispitivanje","Änderung":"Izmjena",
+"Jährliche Inspektion und Wartung":"Godišnja inspekcija i održavanje","Inbetriebnahme / Montage":"Puštanje u rad / montaža","Austausch der Melder":"Zamjena javljača","Nachprüfung":"Naknadna provjera",
+"Jährliche Wartung und Prüfung":"Godišnje održavanje i ispitivanje","Inbetriebnahme / Abnahme":"Puštanje u rad / prijem",
+"Prüfung durchgeführt nach (eine Auswahl)":"Ispitivanje izvršeno prema (jedan izbor)","Prüfung nach (eine Auswahl)":"Ispitivanje prema (jedan izbor)",
+"Verwendetes Messgerät":"Korišteni mjerni uređaj","Fabrikat":"Proizvođač","Typ":"Tip","Fabrik-/Serien-Nr.":"Fabrički / serijski broj","Fabrikat antippen, um aus gängigen Prüfgeräten zu wählen.":"Dodirnite proizvođača za izbor uobičajenih mjernih uređaja.",
+"Netzform":"Oblik mreže","Nennspannung":"Nazivni napon",
+"Besichtigung":"Vizuelni pregled","Erprobung":"Funkcionalna provjera","Messung":"Mjerenje","Offene auf ✓":"Otvorene na ✓","entfällt":"otpada","Bemerkungen zur Erprobung":"Napomene uz funkcionalnu provjeru",
+"Richtige Auswahl der Betriebsmittel":"Pravilan izbor opreme","Betriebsmittel ohne Schäden":"Oprema bez oštećenja","Schutz gegen direktes Berühren":"Zaštita od direktnog dodira","Brandabschottung":"Protivpožarno pregrađivanje","Leitungsverlegung":"Polaganje vodova",
+"Zielbezeichnung der Leitungen im Verteiler":"Označavanje vodova u razvodnoj tabli","Hauptpotentialausgleich (Schutzpotentialausgleich)":"Glavno izjednačavanje potencijala (zaštitno)","Zusätzlicher (örtlicher) Potentialausgleich":"Dodatno (lokalno) izjednačavanje potencijala",
+"Überstrom-Schutzeinrichtung":"Nadstrujna zaštitna naprava","Fehlerstrom-Schutzeinrichtung":"Zaštitna strujna sklopka (RCD)","Überspannungsschutz Grobschutz (Typ 1)":"Prenaponska zaštita, grubo (tip 1)","Überspannungsschutz Mittelschutz (Typ 2)":"Prenaponska zaštita, srednje (tip 2)","Überspannungsschutz Feinschutz (Typ 3)":"Prenaponska zaštita, fino (tip 3)",
+"Kleinspannung mit sicherer Trennung":"Mali napon sa sigurnim odvajanjem","Schutztrennung":"Zaštitno odvajanje","Schutzisolierung":"Zaštitna izolacija","Wärmeerzeugende Betriebsmittel":"Oprema koja proizvodi toplotu","Sicherheitseinrichtungen":"Sigurnosne naprave",
+"Funktion der Schutz- und Überwachungseinrichtungen":"Funkcija zaštitnih i nadzornih naprava","Funktion der Starkstromanlage":"Funkcija jake struje","Drehfeldrichtung der Drehstrom-Steckdosen":"Smjer obrtnog polja trofaznih utičnica",
+"Erdungswiderstand (Ω)":"Otpor uzemljenja (Ω)","Durchgängigkeit Schutzleiter / Potentialausgleich":"Neprekidnost zaštitnog vodiča / izjednačavanja potencijala","Messspannung R isol (V)":"Mjerni napon R izol (V)",
+"Grenzwerte Zs / Ik mit Faktor 2/3 für Leitererwärmung (DIN VDE 0100-600, Anhang C)":"Granične vrijednosti Zs / Ik s faktorom 2/3 za zagrijavanje vodiča (DIN VDE 0100-600, Prilog C)",
+"Stromkreise":"Strujni krugovi","Stromkreis":"Strujni krug","SK":"SK","Bezeichnung":"Naziv","Bezeichnung, z. B. Steckdosen Küche":"Naziv, npr. utičnice kuhinja","Stromkreis-Nr.":"Broj strujnog kruga",
+"Stromkreis entfernen":"Ukloni strujni krug","Stromkreis nach oben":"Strujni krug gore","Stromkreis nach unten":"Strujni krug dole","nach oben":"gore","nach unten":"dole",
+"Leitung / Kabel":"Vod / kabal","Leiteranzahl":"Broj vodiča","Querschnitt mm²":"Presjek mm²","Schutzart":"Vrsta zaštite","ohne RCD":"bez RCD","Art / Charakteristik":"Vrsta / karakteristika","In (A)":"In (A)","In / Art":"In / vrsta",
+"Bemerkung":"Napomena","Bemerkungen":"Napomene","Besichtigung / Bemerkung":"Pregled / napomena","oder Ik (A)":"ili Ik (A)","R isol (MΩ)":"R izol (MΩ)","I mess (mA)":"I mjer (mA)","t mess (ms)":"t mjer (ms)","U mess (V)":"U mjer (V)",
+"Sicherung gG (NH / Neozed / Diazed)":"Osigurač gG (NH / Neozed / Diazed)","Sicherung gL":"Osigurač gL","Sicherung aM (Motor)":"Osigurač aM (motor)","Leistungsschalter":"Prekidač snage","Motorschutzschalter":"Zaštitni prekidač motora","Unterputz-Flachkabel":"Pljosnati kabal pod žbukom","Sammelschiene":"Sabirnica","Stromschiene":"Strujna šina",
+"Prüfergebnis":"Rezultat ispitivanja","Mängelfrei":"Bez nedostataka","Mängel":"Nedostaci","Mängelfrei ist erst wählbar, wenn alle Prüfpunkte in Ordnung sind":"„Bez nedostataka“ se može izabrati tek kad su sve tačke u redu",
+"Die elektrische Anlage entspricht den anerkannten Regeln der Elektrotechnik.":"Električna instalacija odgovara priznatim pravilima elektrotehnike.","Die elektrische Anlage entspricht nicht den anerkannten Regeln der Elektrotechnik.":"Električna instalacija ne odgovara priznatim pravilima elektrotehnike.",
+"Noch nicht alle Prüfpunkte ausgefüllt.":"Još nisu popunjene sve tačke ispitivanja.",
+"Prüfplakette in Stromkreisverteiler eingeklebt":"Naljepnica ispitivanja zalijepljena u razvodnu tablu",
+"Nächster Prüfungstermin":"Sljedeći termin ispitivanja","Nächster Prüftermin":"Sljedeći termin ispitivanja","Nächste Wartung":"Sljedeće održavanje",
+"Automatisch nach DGUV Vorschrift 3: 4 Jahre ab Prüfdatum":"Automatski prema DGUV propisu 3: 4 godine od datuma ispitivanja","Automatisch nach DGUV Vorschrift 3: 1 Jahr ab Prüfdatum":"Automatski prema DGUV propisu 3: 1 godina od datuma ispitivanja",
+"Automatisch nach DIN 14676-1: jährlich, spätestens nach 12 Monaten ± 3 Monate":"Automatski prema DIN 14676-1: godišnje, najkasnije nakon 12 mjeseci ± 3 mjeseca","Automatisch: jährliche Wartung nach DIN 18232-2 und Herstellerangaben":"Automatski: godišnje održavanje prema DIN 18232-2 i podacima proizvođača",
+"Mängel und Bemerkungen":"Nedostaci i napomene","Keine Mängel festgestellt":"Nisu utvrđeni nedostaci",
+"Unterschriften":"Potpisi","Ort, Datum":"Mjesto, datum","Unterschrift Prüfer":"Potpis ispitivača",
+"Protokoll verwalten":"Upravljanje zapisnikom","Als Vorlage für nächste Prüfung kopieren":"Kopiraj kao predložak za sljedeće ispitivanje","Protokoll löschen":"Obriši zapisnik",
+"Protokoll endgültig löschen?":"Trajno obrisati zapisnik?","Ja, löschen":"Da, obriši","Abbrechen":"Odustani",
+"Kopieren":"Kopiraj","Entfernen":"Ukloni","Nr.":"Br.","Nummer":"Broj","Name":"Ime","Art":"Vrsta","Gruppe":"Grupa","Gruppe / Linie":"Grupa / linija","Ergebnis":"Rezultat","in Ordnung":"u redu","nicht in Ordnung":"nije u redu","unbekannt":"nepoznato","Sonstiges":"Ostalo",
+/* Geräte */
+"Prüfobjekt":"Predmet ispitivanja","Prüfobjekt, z. B. Kaffeemaschine":"Predmet ispitivanja, npr. aparat za kafu","Hersteller":"Proizvođač","Hersteller / Typ":"Proizvođač / tip","Inventar-Nr.":"Inventarni broj","Standort":"Lokacija","z. B. Büro 1":"npr. Kancelarija 1","Besonderheit":"Posebnost",
+"Schutzklasse":"Klasa zaštite","SK I mit Schutzleiter":"KZ I sa zaštitnim vodičem","SK II":"KZ II","SK III":"KZ III","R PE (Ω)":"R PE (Ω)","R ISO (MΩ)":"R ISO (MΩ)","I PE / I EA (mA)":"I PE / I EA (mA)","I Berühr. (mA)":"I dodira (mA)",
+"Funktionsprobe bestanden":"Funkcionalna proba uspješna","Prüfung bestanden":"Ispitivanje uspješno","Gerät entfernen":"Ukloni uređaj","Gerät kopieren":"Kopiraj uređaj","Wert nicht in Ordnung":"Vrijednost nije u redu",
+"Sichtprüfung, Messung, Erprobung":"Vizuelni pregled, mjerenje, funkcionalna provjera",
+/* Rauchmelder */
+"Rauchwarnmelder":"Javljači dima","Raum":"Prostorija","Raum, z. B. Schlafzimmer":"Prostorija, npr. spavaća soba","Herstelljahr":"Godina proizvodnje","Maßnahme":"Mjera","keine Maßnahme":"bez mjere",
+"Gereinigt":"Očišćen","Batterie getauscht":"Baterija zamijenjena","Melder getauscht":"Javljač zamijenjen","Melder neu montiert":"Javljač ponovo montiran","Melder versetzt":"Javljač premješten","Nicht zugänglich":"Nije dostupan",
+"Vorhanden und richtig montiert":"Postoji i pravilno je montiran","Keine Beschädigung, keine Verschmutzung":"Bez oštećenja, bez zaprljanja","Raucheindringöffnungen frei":"Otvori za ulaz dima slobodni","Umfeld 0,5 m frei von Hindernissen":"Okolina 0,5 m bez prepreka","Alarmprüfung mit Prüftaste":"Provjera alarma tipkom za test","Energieversorgung / Batterie in Ordnung":"Napajanje / baterija u redu",
+"Melder-Nr.":"Broj javljača","Melder kopieren":"Kopiraj javljač","Melder entfernen":"Ukloni javljač","Melder nach oben":"Javljač gore","Melder nach unten":"Javljač dole",
+"z. B. Ei Electronics Ei650":"npr. Ei Electronics Ei650","z. B. Melder im Bad nicht zulässig, versetzt":"npr. javljač u kupatilu nije dozvoljen, premješten","z. B. Wohnung 2. OG links":"npr. stan 2. sprat lijevo",
+"Inspektion und Wartung vor Ort nach DIN 14676-1 (Verfahren A).":"Inspekcija i održavanje na licu mjesta prema DIN 14676-1 (postupak A).",
+"Alle Rauchwarnmelder sind betriebsbereit.":"Svi javljači dima su spremni za rad.","Nicht alle Rauchwarnmelder sind betriebsbereit.":"Nisu svi javljači dima spremni za rad.","Nicht alle Melder geprüft oder Prüfpunkte offen.":"Nisu svi javljači ispitani ili ima otvorenih tačaka.",
+"Unterschrift durch":"Potpisuje","Mieter":"Stanar","Eigentümer":"Vlasnik","Name des Mieters":"Ime stanara","Name des Eigentümers":"Ime vlasnika","Mieter anwesend":"Stanar prisutan","Eigentümer anwesend":"Vlasnik prisutan",
+"Unterschrift Mieter":"Potpis stanara","Unterschrift Eigentümer":"Potpis vlasnika","Bestätigung Mieter":"Potvrda stanara","Bestätigung Eigentümer":"Potvrda vlasnika",
+"Unterschrift bestätigen und Protokoll sperren":"Potvrdi potpis i zaključaj zapisnik","Protokoll abschließen und sperren":"Završi i zaključaj zapisnik","Bitte zuerst unterschreiben lassen.":"Molimo prvo dajte na potpis.",
+"Protokoll jetzt sperren? Danach sind keine Änderungen mehr möglich.":"Sada zaključati zapisnik? Nakon toga izmjene više nisu moguće.","Ja, sperren":"Da, zaključaj",
+"Mieter war nicht anwesend. Im Protokoll steht dann „nicht anwesend“ statt einer Unterschrift.":"Stanar nije bio prisutan. U zapisniku tada umjesto potpisa piše „nicht anwesend“ (nije prisutan).",
+"Eigentümer war nicht anwesend. Im Protokoll steht dann „nicht anwesend“ statt einer Unterschrift.":"Vlasnik nije bio prisutan. U zapisniku tada umjesto potpisa piše „nicht anwesend“ (nije prisutan).",
+/* RWA */
+"Treppenhaus":"Stubište","RWA-Zentrale":"RWA centrala","Auslöseelemente":"Elementi za aktiviranje","Antriebe / Öffnungen":"Pogoni / otvori","Zentrale":"Centrala","Auslöseelement":"Element za aktiviranje","Antrieb":"Pogon",
+"Standort, z. B. Treppenhaus EG":"Lokacija, npr. stubište prizemlje","Einbauort, z. B. Treppenhaus 3. OG":"Mjesto ugradnje, npr. stubište 3. sprat","Einbauort, z. B. Treppenhaus Dach":"Mjesto ugradnje, npr. stubište krov",
+"Akkus eingebaut (Jahr)":"Akumulatori ugrađeni (godina)","Akkuspannung (V)":"Napon akumulatora (V)","Ladespannung (V)":"Napon punjenja (V)","z. B. 26,8":"npr. 26,8","z. B. 27,6":"npr. 27,6","z. B. 1":"npr. 1",
+"z. B. D+H RZN 4402-K, GEZE THZ N4":"npr. D+H RZN 4402-K, GEZE THZ N4","z. B. D+H KA 34":"npr. D+H KA 34","Antrieb Hersteller / Typ":"Pogon proizvođač / tip","Öffnung":"Otvor","Öffnungszeit (s)":"Vrijeme otvaranja (s)","max. 60 s":"maks. 60 s",
+"Netzversorgung, Betriebsanzeige":"Mrežno napajanje, pokazivač rada","Störungsanzeige und Weiterleitung":"Prikaz smetnje i prosljeđivanje","Notstrombetrieb bei Netzausfall":"Rezervno napajanje pri nestanku mreže","Funktionstest im Akkubetrieb ohne Netzversorgung":"Test funkcije na akumulatoru bez mrežnog napajanja",
+"Akkus: Zustand, Anschluss":"Akumulatori: stanje, priključak","Sicherungen, Klemmen, Verdrahtung":"Osigurači, stezaljke, ožičenje","Ansteuerung durch BMA / Brandfallsteuerung":"Upravljanje putem vatrodojave / požarno upravljanje",
+"Auslösung, Funktion":"Aktiviranje, funkcija","Anzeige, Beschriftung":"Prikaz, natpis","Zustand, Befestigung, Scheibe":"Stanje, pričvršćenje, staklo",
+"Öffnen im Brandfall":"Otvaranje u slučaju požara","Schließen":"Zatvaranje","Mechanik, Beschläge, Konsolen":"Mehanika, okovi, konzole","Anschlussleitung, Klemmdose":"Priključni vod, razvodna kutija","Öffnungsweite, Querschnitt frei":"Širina otvora, presjek slobodan",
+"RWA-Bedienstelle (Taster)":"RWA komandno mjesto (taster)","Lüftungstaster":"Taster za provjetravanje","Wärmemelder":"Toplotni javljač","Wind-/Regenmelder":"Javljač vjetra/kiše","Ansteuerung BMA":"Upravljanje vatrodojavom",
+"Lichtkuppel":"Svjetlosna kupola","Dachfenster":"Krovni prozor","Fassadenfenster":"Fasadni prozor","Kippfenster":"Kipni prozor","Lamellenfenster":"Lamelni prozor","RWA-Klappe":"RWA klapna","Zuluft-Fenster":"Prozor za dovod zraka","Zuluft-Tür":"Vrata za dovod zraka",
+"Rauchabzugsöffnung an oberster Stelle, freier Querschnitt mind. 1 m² (MBO § 35)":"Otvor za odvod dima na najvišem mjestu, slobodan presjek min. 1 m² (MBO § 35)","Zuluft vorhanden (Haustür oder Fenster im EG öffenbar)":"Dovod zraka postoji (ulazna vrata ili prozor u prizemlju se mogu otvoriti)",
+"Bedienstellen gekennzeichnet, zugänglich und nicht verstellt":"Komandna mjesta označena, dostupna i nezaklonjena","Öffnungen und Antriebe nicht verbaut oder blockiert":"Otvori i pogoni nisu zazidani ni blokirani",
+"z. B. Mehrfamilienhaus, Treppenhaus Haus 2":"npr. stambena zgrada, stubište kuća 2",
+"Treppenhaus-Rauchabzug in Wohngebäuden: Wartung und Funktionsprüfung nach Herstellerangaben, angelehnt an DIN 18232-2 und DIN EN 12101.":"Odvod dima iz stubišta stambenih zgrada: održavanje i provjera funkcije prema podacima proizvođača, po uzoru na DIN 18232-2 i DIN EN 12101.",
+"Die RWA-Anlage ist betriebsbereit und funktionsfähig.":"RWA sistem je spreman za rad i funkcionalan.","Die RWA-Anlage ist nicht uneingeschränkt betriebsbereit.":"RWA sistem nije potpuno spreman za rad.",
+"Warum Mängel:":"Zašto nedostaci:","Noch offen:":"Još otvoreno:",
+"z. B. Büro 2. OG":"npr. kancelarija 2. sprat","z. B. Wohnhaus, Erdgeschoss":"npr. stambena kuća, prizemlje","z. B. UV-1, HV":"npr. UV-1, HV",
+/* Meldungen */
+"Automatische Datensicherung beendet":"Automatska kopija zaustavljena","Automatische Datensicherung eingerichtet":"Automatska kopija podešena","Automatische Datensicherung ist hier nicht möglich.":"Automatska kopija ovdje nije moguća.","Automatische Datensicherung läuft wieder":"Automatska kopija ponovo radi",
+"Daten gesichert":"Podaci sačuvani","Die Datei ist keine gültige Datensicherung.":"Datoteka nije važeća sigurnosna kopija.","Gerät kopiert":"Uređaj kopiran","Melder kopiert":"Javljač kopiran","Kopie für Wiederholungsprüfung angelegt":"Kopija za ponovno ispitivanje kreirana",
+"Legende gespeichert":"Legenda sačuvana","Legende konnte nicht erstellt werden.":"Legenda nije mogla biti kreirana.","Keine Stromkreise für die Legende vorhanden.":"Nema strujnih krugova za legendu.","Löschen fehlgeschlagen":"Brisanje nije uspjelo",
+"PDF gespeichert":"PDF sačuvan","PDF konnte nicht erstellt werden.":"PDF nije mogao biti kreiran.","PDF konnte nicht gespeichert werden.":"PDF nije mogao biti sačuvan.","PDF-Modul nicht geladen. Bitte Internetverbindung prüfen.":"PDF modul nije učitan. Provjerite internet vezu.",
+"Protokoll gelöscht":"Zapisnik obrisan","Protokoll gesperrt":"Zapisnik zaključan","Speichern abgelehnt. Bitte Protokoll prüfen.":"Čuvanje odbijeno. Provjerite zapisnik.","Speichern ist in dieser Ansicht nicht möglich.":"Čuvanje u ovom prikazu nije moguće.",
+"Bitte kurz warten und erneut tippen.":"Molimo sačekajte trenutak i dodirnite ponovo.","Alle Protokolle der Datensicherung sind schon vorhanden.":"Svi zapisnici iz sigurnosne kopije već postoje.","Adresse übernommen":"Adresa preuzeta","PLZ und Ort gesetzt, jetzt Hausnummer eintragen":"Poštanski broj i mjesto postavljeni, sada unesite kućni broj",
+"Gerät":"Uređaj","Keine Vertauschung PE und N":"Nema zamjene PE i N","NHXH-O (Funktionserhalt)":"NHXH-O (očuvanje funkcije)",
+"liegt unter dem Mindestwert 1 MΩ. Isolationsfehler suchen: Verbraucher abklemmen, Leitung auf Beschädigung oder Feuchtigkeit prüfen.":"je ispod minimalne vrijednosti 1 MΩ. Tražite grešku izolacije: odspojite potrošače, provjerite vod na oštećenje ili vlagu."
+};
+// Texte mit veränderlichen Teilen
+const BS_MUSTER=[
+ [/^\+ (.+)$/, (m,a)=>"+ "+tr(a)],
+ [/^Keine Protokolle bei (.+)\.$/, (m,a)=>"Nema zapisnika za: "+tr(a)+"."],
+ [/^Keine Treffer bei (.+)\.$/, (m,a)=>"Nema rezultata za: "+tr(a)+"."],
+ [/^(\d+) Melder$/, (m,a)=>a+" javljača"],
+ [/^(\d+) Geräte · je Gerät ein Blatt im PDF$/, (m,a)=>a+" uređaja · za svaki uređaj jedan list u PDF-u"],
+ [/^Unterschrift (Prüfer|Mieter|Eigentümer) \((.*)\)$/, (m,a,b)=>tr("Unterschrift "+a)+" ("+b+")"],
+ [/^Letzte Datensicherung: vor (\d+) (Tag|Tagen)$/, (m,a)=>"Zadnja sigurnosna kopija: prije "+a+(a==="1"?" dan":" dana")],
+ [/^(Letzte Datensicherung: .+) · Bitte jetzt Daten sichern, damit keine Protokolle verloren gehen\.$/, (m,a)=>tr(a)+" · Molimo sada sačuvajte podatke da se zapisnici ne bi izgubili."],
+ [/^Automatische Datensicherung aktiv(.*)$/, (m,a)=>"Automatska kopija aktivna"+a.replace("zuletzt","zadnja").replace("Freigabe nötig","potrebno odobrenje").replace("bereit","spremno")],
+ [/^Austausch spätestens (\d{4}) \(10 Jahre nach Herstellung\)\.$/, (m,a)=>"Zamjena najkasnije "+a+". (10 godina nakon proizvodnje)."],
+ [/^Austausch fällig: Der Melder ist älter als 10 Jahre \(Herstelljahr (\d{4})\)\.$/, (m,a)=>"Potrebna zamjena: javljač je stariji od 10 godina (godina proizvodnje "+a+")."],
+ [/^Akkus sind (\d+) Jahre alt: Austausch nach Herstellerangabe prüfen \(üblich alle 4 Jahre\)\.$/, (m,a)=>"Akumulatori su stari "+a+" godina: provjerite zamjenu prema podacima proizvođača (obično svake 4 godine)."],
+ [/^Öffnungszeit über 60 s: Die Öffnung muss im Brandfall innerhalb von 60 s offen sein\.$/, ()=>"Vrijeme otvaranja preko 60 s: otvor u slučaju požara mora biti otvoren u roku od 60 s."],
+ [/^Mit meiner Unterschrift bestätige ich, dass die oben aufgeführten Rauchwarnmelder am ([\d.]+) in meinem Beisein geprüft wurden\. .*?(melde ich unverzüglich dem Vermieter bzw\. der Hausverwaltung|lasse ich unverzüglich beheben)\.$/,
+   (m,d,e)=>"Svojim potpisom potvrđujem da su gore navedeni javljači dima "+d+" ispitani u mom prisustvu. U trenutku ispitivanja su postojali, bili pravilno montirani i funkcionalni, izuzeci vidi nedostatke. Upozoren/a sam da se javljači dima ne smiju uklanjati, prekrivati niti ometati u radu. "+(e.startsWith("melde")?"Smetnje, lažne alarme, oštećenja ili javljače koji nedostaju odmah ću prijaviti stanodavcu odnosno upravi zgrade.":"Smetnje, lažne alarme, oštećenja ili javljače koji nedostaju odmah ću dati otkloniti.")+" (Tekst u PDF-u ostaje na njemačkom.)"],
+ [/^Protokoll abgeschlossen und gesperrt am ([\d.]+)\. Änderungen sind nicht mehr möglich, nur noch der Ausdruck als PDF\.$/, (m,d)=>"Zapisnik završen i zaključan "+d+". Izmjene više nisu moguće, samo ispis kao PDF."],
+ [/^Daten wiederhergestellt: (\d+) neu, (\d+) aktualisiert$/, (m,a,b)=>"Podaci vraćeni: "+a+" novih, "+b+" ažuriranih"],
+ [/^(PDF|Datensicherung) gespeichert: (.+)$/, (m,a,b)=>(a==="PDF"?"PDF sačuvan: ":"Sigurnosna kopija sačuvana: ")+b],
+ [/^(Zentrale|Auslöseelement|Antrieb) kopiert$/, (m,a)=>tr(a)+" kopiran"],
+ [/^Beispiel: (.+)$/, (m,a)=>"Primjer: "+a],
+ [/^(.*) · Verteiler (.*?) · (.*)$/, (m,a,b,c)=>a+" · Razvodna tabla "+b+" · "+c],
+ [/^Nur dieses Gerät · (.+)$/, (m,a)=>"Samo ovaj uređaj · "+tr(a)],
+ [/^Unterschrift (Mieter|Eigentümer)$/, (m,a)=>tr("Unterschrift "+a)],
+];
+// Bausteine für zusammengesetzte Hinweise (Liste „Warum Mängel / Noch offen“)
+const BS_TEILE=[["nicht zugänglich, nicht geprüft","nije dostupan, nije ispitan"],["nicht in Ordnung","nije u redu"],["nicht ausgefüllt","nije popunjeno"],["ist länger als 60 s","je duže od 60 s"],["Öffnungszeit","Vrijeme otvaranja"],
+ ["Es ist noch keine RWA-Zentrale eingetragen","Još nije unesena RWA centrala"],["Es ist noch kein Antrieb / keine Öffnung eingetragen","Još nije unesen pogon / otvor"],["Es ist noch kein Rauchwarnmelder eingetragen","Još nije unesen javljač dima"],
+ ["Auslöseelement","Element za aktiviranje"],["Zentrale","Centrala"],["Antrieb","Pogon"],["Melder","Javljač"],["Treppenhaus:","Stubište:"],["Gerät","Uređaj"],["Prüfung bestanden nicht ausgewählt","„Ispitivanje uspješno“ nije izabrano"],["Prüfung nicht bestanden","Ispitivanje nije uspješno"]];
+let LANG="de"; try{ LANG=localStorage.getItem("vde_lang")||"de"; }catch(e){}
+function tr(t){ if(LANG!=="bs") return t; if(BS[t]!=null) return BS[t];
+  for(const [re,f] of BS_MUSTER){ const m=t.match(re); if(m) return f(...m); }
+  return t; }
+function trTeile(t){ let r=t; const quotes=[]; r=r.replace(/„([^“]*)“/g,(m,a)=>{ quotes.push("„"+tr(a)+"“"); return "\u0000"+(quotes.length-1)+"\u0000"; });
+  BS_TEILE.forEach(([a,b])=>{ r=r.split(a).join(b); }); return r.replace(/\u0000(\d+)\u0000/g,(m,i)=>quotes[+i]); }
+const TR_ATTR=["placeholder","aria-label","title"]; const TR_ORIG=new WeakMap();
+function spracheZurueck(){ const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let x; while(x=w.nextNode()){ if(TR_ORIG.has(x)){ x.nodeValue=TR_ORIG.get(x); TR_ORIG.delete(x); } }
+  TR_ATTR.forEach(a=>document.querySelectorAll("[data-de-"+a+"]").forEach(e=>{ e.setAttribute(a,e.getAttribute("data-de-"+a)); e.removeAttribute("data-de-"+a); })); }
+function trNode(n){
+  if(LANG!=="bs") return;
+  if(n.nodeType===3){ const p=n.parentElement; if(!p||p.closest("script,style,textarea,[data-notr]")) return;
+    const raw=n.nodeValue, t=raw.replace(/\s+/g," ").trim(); if(!t||!/[A-Za-zÄÖÜäöüß]/.test(t)) return;
+    let u=tr(t); if(u===t && p.closest(".gruende")) u=trTeile(t);
+    if(u!==t){ if(p.tagName==="OPTION"&&!p.hasAttribute("value")) p.setAttribute("value",p.textContent); if(!TR_ORIG.has(n)) TR_ORIG.set(n,raw); n.nodeValue=raw.replace(t,u); }
+    return; }
+  if(n.nodeType!==1||n.closest("svg,[data-notr]")) return;
+  const els=[n,...n.querySelectorAll("*")];
+  els.forEach(e=>{ if(e.tagName==="OPTION"&&!e.hasAttribute("value")) e.setAttribute("value",e.textContent);
+    TR_ATTR.forEach(a=>{ const v=e.getAttribute&&e.getAttribute(a); if(v){ const u=tr(v.trim()); if(u!==v.trim()){ if(!e.hasAttribute("data-de-"+a)) e.setAttribute("data-de-"+a,v); e.setAttribute(a,u); } } }); });
+  const w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT); let x; const list=[]; while(x=w.nextNode()) list.push(x); list.forEach(trNode);
+}
+let trObs=null;
+function spracheAnwenden(){
+  document.documentElement.lang=LANG==="bs"?"bs":"de";
+  document.querySelectorAll("[data-lang]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.lang===LANG)));
+  if(LANG==="bs"){ trNode(document.body);
+    if(!trObs){ trObs=new MutationObserver(ms=>{ if(LANG!=="bs") return; ms.forEach(m=>{ if(m.type==="characterData") trNode(m.target); else m.addedNodes.forEach(trNode); }); });
+      trObs.observe(document.body,{childList:true,subtree:true,characterData:true}); } }
+}
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-lang]"); if(!b) return;
+  const neu=b.dataset.lang; if(neu===LANG) return; LANG=neu; try{ localStorage.setItem("vde_lang",LANG); }catch(_){}
+  if(LANG==="de") spracheZurueck();
+  if(typeof setSync==="function") setSync($("#sync").dataset.st||"bereit");
+  render(); spracheAnwenden(); });
+
 /* ---------- Start ---------- */
-lsRead(); fixFirma(); render(); setSync("bereit"); initDb(); autoStart();
+lsRead(); fixFirma(); render(); setSync("bereit"); spracheAnwenden(); initDb(); autoStart();
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) flushSave(); });
 })();
 </script>
