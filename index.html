@@ -668,6 +668,19 @@ div.f{display:flex;flex-direction:column;gap:4px;min-width:0}
 .zmove .btn{min-height:24px;padding:0 8px;font-size:11px}
 .kmove .btn{min-height:28px;padding:0 12px;font-size:12px}
 @media (pointer:coarse){.kmove .btn{min-height:34px;padding:0 14px}}
+.btn.ksbtn{font-size:17px;line-height:1;align-self:stretch;min-height:0;padding:0 11px;margin-left:-4px}
+.ks-ov{position:fixed;inset:0;z-index:900;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+.ks-box{background:var(--surface,#fff);color:var(--text,#111);border-radius:14px;width:min(560px,100%);max-height:100%;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+.ks-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line,#d8dee6);font-size:17px}
+.ks-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px}
+.ks-tools .note{margin:0}
+.ks-list{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px 16px;display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+.ks-row{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 12px;border:1px solid var(--line,#d8dee6);border-radius:10px;background:var(--surface,#fff);user-select:none;-webkit-user-select:none;cursor:grab;flex:none}
+.ks-row.zieht{position:relative;z-index:2;box-shadow:0 8px 22px rgba(0,0,0,.22);border-color:var(--accent,#1f5fa8);cursor:grabbing}
+.ks-grip{color:var(--muted,#667);font-size:22px;line-height:1;align-self:stretch;display:flex;align-items:center;padding:0 6px 0 4px;margin:-6px 0 -6px -8px}
+.ks-grip,.ks-nr{touch-action:none}
+.ks-nr{font-weight:700;min-width:52px;align-self:stretch;display:flex;align-items:center;margin:-6px 0;font-variant-numeric:tabular-nums}
+.ks-bez{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .item.bewegt{outline:2px solid var(--accent,#1f5fa8);outline-offset:2px;transition:outline-color .6s}
 .zuord{display:flex;flex-direction:column}
 .zrow{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
@@ -1254,7 +1267,7 @@ function zeigePlanVorschau(){
   const lb=$("#planBlatt"); if(lb) lb.textContent="Blatt "+(r.i+1)+" von "+r.n;
   const bl=$("#planBlaetter"); if(bl) bl.innerHTML=r.n>1?Array.from({length:r.n},(_,i)=>`<button class="btn small ${i===r.i?"primary":""}" data-pseite="${i}">${esc(r.namen[i])}</button>`).join(""):"";
 }
-const APP_STAND="10.11.2026 · Version 208";
+const APP_STAND="10.11.2026 · Version 210";
 function zeileHtml(p){ const b=bewProtokoll(p).final;
         return `<div class="prow" data-row="${esc(p.id)}"><button class="pitem" data-open="${esc(p.id)}">
           <span class="typ typ-${p.typ}">${TYP_NAME[p.typ]||"Protokoll"}</span>
@@ -1382,9 +1395,47 @@ function melderHtml(m,i){
     ${listInp("melder",i,"bem","Bemerkung",{ph:"z. B. Melder im Bad nicht zulässig, versetzt"})}
   </div>`;
 }
+
+/* Reihenfolge der Stromkreise: Fenster mit Ziehen und automatischer Sortierung */
+let ksOv=null;
+function ksZeilen(){ return `${cur.kreise.map((k,i)=>`<div class="ks-row" data-ki="${i}"><span class="ks-grip" aria-hidden="true">≡</span><span class="ks-nr">${esc(k.nr||"–")}</span><span class="ks-bez">${esc(k.bez||"")}</span></div>`).join("")}`; }
+function ksUebernehmen(){ const alt=cur.kreise, neu=[...ksOv.querySelectorAll(".ks-row")].map(r=>alt[+r.dataset.ki]); if(neu.length!==alt.length||neu.some(x=>!x)) return;
+  const geaendert=neu.some((x,i)=>x!==alt[i]); cur.kreise=neu; ksOv.querySelectorAll(".ks-row").forEach((r,i)=>r.dataset.ki=i); if(geaendert) scheduleSave(); }
+function ksSchliessen(){ if(!ksOv) return; ksOv.remove(); ksOv=null; document.body.style.overflow=""; rerenderKeepScroll(); }
+function ksOeffnen(){ if(ksOv||!cur||!Array.isArray(cur.kreise)) return;
+  ksOv=document.createElement("div"); ksOv.className="ks-ov";
+  ksOv.innerHTML=`<div class="ks-box" role="dialog" aria-modal="true" aria-label="Reihenfolge der Stromkreise"><div class="ks-head"><b>Reihenfolge der Stromkreise</b><button class="btn primary small" data-ks="zu">Fertig</button></div>
+    <div class="ks-tools"><button class="btn small" data-ks="auto">Automatisch sortieren</button><span class="note">Zum Verschieben links am ≡ ziehen</span></div>
+    <div class="ks-list">${ksZeilen()}</div></div>`;
+  document.body.appendChild(ksOv); document.body.style.overflow="hidden";
+  const list=ksOv.querySelector(".ks-list");
+  ksOv.addEventListener("click",e=>{ if(e.target===ksOv){ ksSchliessen(); return; } const b=e.target.closest("[data-ks]"); if(!b) return;
+    if(b.dataset.ks==="zu") ksSchliessen();
+    else { const rows=[...list.children], m=flipSnap(rows,r=>r);
+      const teile=r=>String(cur.kreise[+r.dataset.ki].nr||"").trim();
+      rows.map((r,i)=>[r,i]).sort((a,b)=>{ const x=teile(a[0]), y=teile(b[0]); if(!x!==!y) return x?-1:1; return x.localeCompare(y,"de",{numeric:true,sensitivity:"base"})||a[1]-b[1]; }).forEach(([r])=>list.appendChild(r));
+      ksUebernehmen(); try{ flipPlay(m,[...list.children],r=>r); }catch(e){} } });
+  let d=null;
+  list.addEventListener("pointerdown",e=>{ const row=e.target.closest(".ks-row"); if(!row||d||(e.pointerType==="mouse"?e.button!==0:!e.target.closest(".ks-grip,.ks-nr"))) return; e.preventDefault();
+    d={row,y:e.clientY,dy:0,id:e.pointerId}; try{ row.setPointerCapture(e.pointerId); }catch(_){} row.classList.add("zieht"); });
+  const bewege=e=>{ if(!d||e.pointerId!==d.id) return; e.preventDefault(); const row=d.row; d.last=e.clientY;
+    let dy=e.clientY-d.y;
+    for(;;){ const nb=dy>0?row.nextElementSibling:row.previousElementSibling; if(!nb) break; const h=nb.getBoundingClientRect().height+6; if(Math.abs(dy)<h/2) break;
+      const t0=nb.getBoundingClientRect().top; if(dy>0){ nb.after(row); d.y+=h; dy-=h; } else { nb.before(row); d.y-=h; dy+=h; }
+      const t1=nb.getBoundingClientRect().top; if(nb.animate) nb.animate([{transform:"translateY("+(t0-t1)+"px)"},{transform:"none"}],{duration:160,easing:"ease-out"}); }
+    const first=!row.previousElementSibling, last=!row.nextElementSibling; if((first&&dy<0)||(last&&dy>0)) dy=dy/4;
+    row.style.transform="translateY("+dy+"px)";
+    const lr=list.getBoundingClientRect(); if(e.clientY<lr.top+40){ const v=list.scrollTop; list.scrollTop-=10; d.y+=v-list.scrollTop; } else if(e.clientY>lr.bottom-40){ const v=list.scrollTop; list.scrollTop+=10; d.y-=list.scrollTop-v; } };
+  const ende=e=>{ if(!d||e.pointerId!==d.id) return; const row=d.row; d=null; row.classList.remove("zieht");
+    const von=row.style.transform; row.style.transform=""; if(row.animate&&von) row.animate([{transform:von},{transform:"none"}],{duration:140,easing:"ease-out"}); ksUebernehmen(); };
+  list.addEventListener("pointermove",bewege); list.addEventListener("pointerup",ende); list.addEventListener("pointercancel",ende);
+  list.addEventListener("touchmove",e=>{ if(d) e.preventDefault(); },{passive:false});
+}
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-ksort]"); if(b){ e.preventDefault(); ksOeffnen(); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&ksOv) ksSchliessen(); });
 function kreisHtml(k,i){
   return `<div class="item" data-item="kreise-${i}">
-    <div class="item-h"><span class="zmove kmove"><button class="btn small ghost" data-kmove="${i}" data-dir="-1" aria-label="Stromkreis nach oben" ${i===0?"disabled":""}>▲</button><button class="btn small ghost" data-kmove="${i}" data-dir="1" aria-label="Stromkreis nach unten" ${i===cur.kreise.length-1?"disabled":""}>▼</button></span><span class="nr">SK</span><input class="inp num" style="width:96px" id="kreise_${i}_nr" data-list="kreise" data-idx="${i}" data-field="nr" value="${esc(k.nr)}" aria-label="Stromkreis-Nr.">
+    <div class="item-h"><span class="zmove kmove"><button class="btn small ghost" data-kmove="${i}" data-dir="-1" aria-label="Stromkreis nach oben" ${i===0?"disabled":""}>▲</button><button class="btn small ghost" data-kmove="${i}" data-dir="1" aria-label="Stromkreis nach unten" ${i===cur.kreise.length-1?"disabled":""}>▼</button></span><button class="btn small ghost ksbtn" data-ksort aria-label="Reihenfolge ändern" title="Reihenfolge ändern">≡</button><span class="nr">SK</span><input class="inp num" style="width:96px" id="kreise_${i}_nr" data-list="kreise" data-idx="${i}" data-field="nr" value="${esc(k.nr)}" aria-label="Stromkreis-Nr.">
       <div class="ac grow"><input class="inp" id="kreise_${i}_bez" data-list="kreise" data-idx="${i}" data-field="bez" data-kac="${i}" value="${esc(k.bez)}" placeholder="Bezeichnung, z. B. Steckdosen Küche" aria-label="Bezeichnung" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="kac_${i}"><div class="ac-list" data-notr id="kac_${i}" role="listbox" hidden></div></div>
       <span data-status="kreise-${i}"></span>
       <button class="btn small ghost" data-del-item="kreise-${i}" aria-label="Stromkreis entfernen">Entfernen</button></div>
@@ -3048,7 +3099,7 @@ const BS={
 "VDE Prüfprotokoll":"VDE zapisnik o ispitivanju",
 "Lokal":"Lokalno","bereit":"spremno","Gespeichert":"Sačuvano","Speichert …":"Čuva se …","Ungespeichert":"Nije sačuvano","Cloud nicht erreichbar":"Oblak nije dostupan",
 "Elektro Wüller GmbH · Protokolle":"Elektro Wüller GmbH · Zapisnici",
-"E-Installation Protokoll":"Elektroinstalacija","Geräte Protokoll":"Uređaji","Rauchmelder Protokoll":"Javljači dima","RWA Protokoll":"RWA (odvod dima)","Stromlaufplan":"Strujna shema","Elektro Wüller GmbH · Protokolle":"Elektro Wüller GmbH · Zapisnici","Aus Stromlaufplan übernehmen":"Preuzmi iz strujne sheme","Stromlaufpläne":"Strujne sheme","Synchronisiert mit Stromlaufplan":"Sinhronizovano sa strujnom shemom","Synchronisiert mit E-Protokoll":"Sinhronizovano sa E-zapisnikom","Nicht synchronisiert":"Nije sinhronizovano","Keine Stromlaufpläne.":"Nema strujnih shema.","Stromlaufplan anlegen":"Napravi strujnu shemu","PDF wird erstellt …":"PDF se pravi …","PDF konnte nicht erstellt werden.":"PDF nije moguće napraviti.","Stromlaufplan öffnen":"Otvori strujnu shemu","Anderen Stromlaufplan verbinden":"Poveži drugu strujnu shemu","Stromkreise aus Stromlaufplan übernehmen":"Preuzmi strujne krugove iz strujne sheme","Gespeichert: ":"Sačuvano: ",
+"E-Installation Protokoll":"Elektroinstalacija","Geräte Protokoll":"Uređaji","Rauchmelder Protokoll":"Javljači dima","RWA Protokoll":"RWA (odvod dima)","Stromlaufplan":"Strujna shema","Elektro Wüller GmbH · Protokolle":"Elektro Wüller GmbH · Zapisnici","Aus Stromlaufplan übernehmen":"Preuzmi iz strujne sheme","Stromlaufpläne":"Strujne sheme","Synchronisiert mit Stromlaufplan":"Sinhronizovano sa strujnom shemom","Synchronisiert mit E-Protokoll":"Sinhronizovano sa E-zapisnikom","Reihenfolge der Stromkreise":"Redoslijed strujnih krugova","Fertig":"Gotovo","Automatisch sortieren":"Automatski sortiraj","Zum Verschieben links am ≡ ziehen":"Za pomjeranje povucite lijevo za ≡","Reihenfolge ändern":"Promijeni redoslijed","Nicht synchronisiert":"Nije sinhronizovano","Keine Stromlaufpläne.":"Nema strujnih shema.","Stromlaufplan anlegen":"Napravi strujnu shemu","PDF wird erstellt …":"PDF se pravi …","PDF konnte nicht erstellt werden.":"PDF nije moguće napraviti.","Stromlaufplan öffnen":"Otvori strujnu shemu","Anderen Stromlaufplan verbinden":"Poveži drugu strujnu shemu","Stromkreise aus Stromlaufplan übernehmen":"Preuzmi strujne krugove iz strujne sheme","Gespeichert: ":"Sačuvano: ",
 "E-Installation":"Elektroinstalacija","Geräte":"Uređaji","Rauchmelder":"Javljači dima","RWA":"RWA",
 "Kunde, Adresse oder Verteiler suchen":"Traži klijenta, adresu ili razvodnu tablu",
 "Noch keine Protokolle":"Još nema zapisnika",
