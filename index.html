@@ -1253,6 +1253,7 @@ function zeigePlanVorschau(){
   const lb=$("#planBlatt"); if(lb) lb.textContent="Blatt "+(r.i+1)+" von "+r.n;
   const bl=$("#planBlaetter"); if(bl) bl.innerHTML=r.n>1?Array.from({length:r.n},(_,i)=>`<button class="btn small ${i===r.i?"primary":""}" data-pseite="${i}">${esc(r.namen[i])}</button>`).join(""):"";
 }
+const APP_STAND="10.11.2026 · Version 206";
 function zeileHtml(p){ const b=bewProtokoll(p).final;
         return `<div class="prow" data-row="${esc(p.id)}"><button class="pitem" data-open="${esc(p.id)}">
           <span class="typ typ-${p.typ}">${TYP_NAME[p.typ]||"Protokoll"}</span>
@@ -1287,7 +1288,7 @@ function renderList(){
           ${!settings.mgHersteller?`<p class="note" style="margin:0">Tipp: Trag unter „Firma & Messgerät“ euer Messgerät ein. Es landet dann automatisch in jedem neuen Protokoll.</p>`:""}
         </div>`}
     ${sicherungHtml()}
-    <p class="note">Auf iPad oder iPhone: Seite in Safari öffnen, Teilen-Symbol, „Zum Home-Bildschirm“. Dann startet das Prüfprotokoll wie eine App.</p>`;
+    <p class="note">Auf iPad oder iPhone: Seite in Safari öffnen, Teilen-Symbol, „Zum Home-Bildschirm“. Dann startet das Prüfprotokoll wie eine App.</p><p class="note" data-notr style="margin-top:4px">Stand: ${APP_STAND}</p>`;
   dockHost.innerHTML="";
   if(listTab==="slp") setTimeout(slpSetup,50);
   const q=$("#q"); if(q){ q.addEventListener("input",()=>{ query=q.value; const pos=q.selectionStart; renderList(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos);}catch(e){} }); }
