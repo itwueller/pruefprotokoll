@@ -743,7 +743,7 @@ button,select,input,textarea{touch-action:manipulation}
   <div class="bar-in">
     <div class="brand" data-notr><img id="brandLogo" alt="Elektro Wüller"></div>
     <div class="bar-r"><span class="sync" id="sync">Lokal</span>
-      <div class="lang" role="group" aria-label="Sprache / Jezik"><button type="button" data-lang="de" aria-pressed="true">DE</button><button type="button" data-lang="bs" aria-pressed="false">BS</button></div></div>
+      </div>
   </div>
 </header>
 <main id="app"></main>
@@ -1267,7 +1267,7 @@ function zeigePlanVorschau(){
   const lb=$("#planBlatt"); if(lb) lb.textContent="Blatt "+(r.i+1)+" von "+r.n;
   const bl=$("#planBlaetter"); if(bl) bl.innerHTML=r.n>1?Array.from({length:r.n},(_,i)=>`<button class="btn small ${i===r.i?"primary":""}" data-pseite="${i}">${esc(r.namen[i])}</button>`).join(""):"";
 }
-const APP_STAND="10.11.2026 · Version 210";
+const APP_STAND="11.11.2026 · Version 211";
 function zeileHtml(p){ const b=bewProtokoll(p).final;
         return `<div class="prow" data-row="${esc(p.id)}"><button class="pitem" data-open="${esc(p.id)}">
           <span class="typ typ-${p.typ}">${TYP_NAME[p.typ]||"Protokoll"}</span>
@@ -3228,7 +3228,7 @@ const BS_MUSTER=[
 const BS_TEILE=[["nicht zugänglich, nicht geprüft","nije dostupan, nije ispitan"],["nicht in Ordnung","nije u redu"],["nicht ausgefüllt","nije popunjeno"],["ist länger als 60 s","je duže od 60 s"],["Öffnungszeit","Vrijeme otvaranja"],
  ["Es ist noch keine RWA-Zentrale eingetragen","Još nije unesena RWA centrala"],["Es ist noch kein Antrieb / keine Öffnung eingetragen","Još nije unesen pogon / otvor"],["Es ist noch kein Rauchwarnmelder eingetragen","Još nije unesen javljač dima"],
  ["Auslöseelement","Element za aktiviranje"],["Zentrale","Centrala"],["Antrieb","Pogon"],["Melder","Javljač"],["Treppenhaus:","Stubište:"],["Gerät","Uređaj"],["Prüfung bestanden nicht ausgewählt","„Ispitivanje uspješno“ nije izabrano"],["Prüfung nicht bestanden","Ispitivanje nije uspješno"]];
-let LANG="de"; try{ LANG=localStorage.getItem("vde_lang")||"de"; }catch(e){}
+let LANG="de"; try{ localStorage.removeItem("vde_lang"); }catch(e){}
 function tr(t){ if(LANG!=="bs") return t; if(BS[t]!=null) return BS[t];
   for(const [re,f] of BS_MUSTER){ const m=t.match(re); if(m) return f(...m); }
   return t; }
